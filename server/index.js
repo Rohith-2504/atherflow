@@ -56,17 +56,27 @@ app.post('/api/auth/signup', (req, res) => {
 
 // API Route: Auth Signin
 app.post('/api/auth/signin', (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, role } = req.body;
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'Username and password are required.' });
   }
   const cleanUsername = username.trim().toLowerCase();
+  const requestedRole = role === 'admin' ? 'admin' : 'user';
 
   try {
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(cleanUsername);
     if (!user || user.password !== password) {
       return res.status(400).json({ success: false, message: 'Invalid username or password.' });
     }
+
+    // Security check: Verify user role matches the gate role they are entering
+    if (user.role !== requestedRole) {
+      return res.status(403).json({ 
+        success: false, 
+        message: `Unauthorized. This account does not have ${requestedRole} privileges.` 
+      });
+    }
+
     return res.json({
       success: true,
       message: 'Logged in successfully!',

@@ -55,7 +55,7 @@ export default function Auth({ onAuthSuccess }) {
       const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/signin';
       const payload = isSignUp 
         ? { username, password, full_name, role: isAdmin ? 'admin' : 'user' }
-        : { username, password };
+        : { username, password, role: isAdmin ? 'admin' : 'user' };
 
       const response = await fetch(endpoint, {
         method: 'POST',

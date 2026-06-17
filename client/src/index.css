@@ -243,3 +243,16 @@ a {
     font-size: 2rem;
   }
 }
+
+/* Page Load Transition Wrapper */
+.app-layout-wrapper {
+  opacity: 0;
+  transform: scale(1.015);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-layout-wrapper.loaded {
+  opacity: 1;
+  transform: scale(1);
+}

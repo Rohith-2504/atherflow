@@ -358,6 +358,11 @@ export default function Workflow3D() {
     brainGroup.add(lineSegments);
 
     // 8c. Primary Route High-Glow Synaptic Lines
+    const pathConnectionsList = [
+      [0, 4], [4, 5], [5, 1], // Path 1
+      [1, 6], [6, 7], [7, 2], // Path 2
+      [1, 8], [8, 9], [9, 3]  // Path 3
+    ];
     const pathLinePositions = [];
     pathConnectionsList.forEach(([a, b]) => {
       const fromNode = nodes[a];

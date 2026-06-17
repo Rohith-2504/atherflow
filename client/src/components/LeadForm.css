@@ -1,0 +1,334 @@
+.lead-container {
+  max-width: 760px !important;
+}
+
+.lead-card-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 48px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s ease;
+}
+
+.lead-card-wrapper.highlighted {
+  animation: borderGlowFlash 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes borderGlowFlash {
+  0% {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.8), 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.8), 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    border-color: var(--border-color);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.lead-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-row {
+  display: flex;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex: 1;
+  position: relative;
+}
+
+.form-group label {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.form-group input,
+.form-group textarea {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 14px 16px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  transition: all var(--transition-fast);
+  outline: none;
+  width: 100%;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.2);
+}
+
+.form-group input.invalid,
+.form-group textarea.invalid {
+  border-color: var(--color-error);
+}
+
+.form-group input.invalid:focus,
+.form-group textarea.invalid:focus {
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.25);
+}
+
+.error-message {
+  color: var(--color-error);
+  font-size: 0.775rem;
+  font-weight: 500;
+}
+
+.form-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+}
+
+.form-alert.error {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: var(--color-error);
+}
+
+.submit-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 16px;
+  font-size: 1.05rem;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success Screen */
+.success-screen {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.success-icon {
+  color: var(--color-success);
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.3));
+  margin-bottom: 24px;
+}
+
+.success-screen h3 {
+  font-size: 1.75rem;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.success-message {
+  font-size: 1.05rem;
+  max-width: 480px;
+  margin-bottom: 28px;
+}
+
+.success-details {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: 20px 32px;
+  margin-bottom: 32px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.success-details code {
+  color: var(--color-secondary);
+}
+
+/* SQLite Inspector Styles */
+.inspector-wrapper {
+  margin-top: 32px;
+  background: rgba(4, 5, 8, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.inspector-toggle {
+  width: 100%;
+  padding: 20px 24px;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+.inspector-toggle:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.inspector-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.database-icon {
+  color: var(--color-secondary);
+}
+
+.database-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+
+.database-indicator.online {
+  background: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+.inspector-content {
+  padding: 0 24px 24px 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.inspector-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inspector-meta p {
+  font-size: 0.85rem;
+}
+
+.inspector-meta code {
+  color: var(--color-secondary);
+  background: rgba(6, 182, 212, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.refresh-btn {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+}
+
+.inspector-empty {
+  text-align: center;
+  padding: 40px 0;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-muted);
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+.inspector-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.inspector-table th {
+  background: rgba(255, 255, 255, 0.02);
+  color: #fff;
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.inspector-table td {
+  padding: 12px 16px;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--border-color);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-row:last-child td {
+  border-bottom: none;
+}
+
+.table-row:hover td {
+  background: rgba(255, 255, 255, 0.01);
+  color: #fff;
+}
+
+.lead-id {
+  color: var(--color-secondary) !important;
+  font-weight: 600;
+}
+
+.lead-name {
+  color: #fff !important;
+  font-weight: 500;
+}
+
+.lead-email {
+  color: var(--color-text) !important;
+}
+
+.lead-message {
+  max-width: 250px !important;
+}
+
+.lead-date {
+  font-size: 0.775rem;
+  color: var(--color-text-dark) !important;
+}
+
+@media (max-width: 768px) {
+  .lead-card-wrapper {
+    padding: 32px 24px;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}

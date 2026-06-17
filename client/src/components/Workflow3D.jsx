@@ -1,17 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { MessageSquare, Cpu, Database, Zap, Terminal } from 'lucide-react';
+import { MessageSquare, Cpu, Database, Zap, Terminal, Activity, Eye, EyeOff } from 'lucide-react';
 import './Workflow3D.css';
 
 export default function Workflow3D() {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   
-  // Tooltip DOM references to project positions directly
+  // Tooltip & status DOM references
   const tooltipRefs = useRef([]);
   const statusRef = useRef(null);
 
+  // React state for HUD dashboard
   const [activeNode, setActiveNode] = useState(null);
+  const [cognitiveState, setCognitiveState] = useState('RESTING POTENTIAL');
+  const [scanMode, setScanMode] = useState(false);
+
+  // Shared bridge ref between React button callbacks and Three.js loop
+  const controlsRef = useRef({
+    triggerNeuralStorm: null,
+    triggerPulse: null,
+    scanMode: false,
+    zoomIn: null,
+    zoomOut: null
+  });
 
   const nodeData = [
     {
@@ -52,6 +64,34 @@ export default function Workflow3D() {
     }
   ];
 
+  // React Button Trigger Handlers
+  const handleNeuralStorm = () => {
+    if (controlsRef.current.triggerNeuralStorm) {
+      setCognitiveState('NEURAL STORM CASCADE');
+      controlsRef.current.triggerNeuralStorm();
+      // Reset state back to normal after storm completes (2.5s)
+      setTimeout(() => {
+        setCognitiveState('RESTING POTENTIAL');
+      }, 2500);
+    }
+  };
+
+  const handleInjectStimulus = () => {
+    if (controlsRef.current.triggerPulse) {
+      setCognitiveState('STIMULUS RECEIVED');
+      controlsRef.current.triggerPulse();
+      setTimeout(() => {
+        setCognitiveState('RESTING POTENTIAL');
+      }, 1200);
+    }
+  };
+
+  const handleToggleScan = () => {
+    const nextScan = !scanMode;
+    setScanMode(nextScan);
+    controlsRef.current.scanMode = nextScan;
+  };
+
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
 
@@ -67,7 +107,7 @@ export default function Workflow3D() {
 
     // --- 2. Camera Setup (Orthographic for Isometric projection) ---
     const aspect = width / height;
-    const d = 2.4; // Zoomed in closer for detailed brain mesh
+    const d = 2.4; // Zoom scale factor
     const camera = new THREE.OrthographicCamera(
       -d * aspect,
       d * aspect,
@@ -76,9 +116,12 @@ export default function Workflow3D() {
       1,
       1000
     );
-    // Standard isometric camera angle
     camera.position.set(10, 8.5, 10);
     camera.lookAt(0, 0, 0);
+
+    // Track target zoom for smooth scroll transitions
+    let targetZoom = 1.0;
+    camera.zoom = 1.0;
 
     // --- 3. Renderer Setup ---
     const renderer = new THREE.WebGLRenderer({
@@ -98,11 +141,11 @@ export default function Workflow3D() {
     dirLight.position.set(5, 10, 5);
     scene.add(dirLight);
 
-    // --- 5. Brain Group Setup (for global rotation) ---
+    // --- 5. Brain Group Setup (contains all nodes, synapses, and pulses) ---
     const brainGroup = new THREE.Group();
     scene.add(brainGroup);
 
-    // --- 6. Brain Nodes Generation (70 nodes representing a neural network) ---
+    // --- 6. Brain Nodes Generation (70 nodes) ---
     const nodes = [];
     
     // Explicitly define primary/workflow nodes
@@ -111,7 +154,7 @@ export default function Workflow3D() {
     nodes.push({ x: 1.0, y: -0.2, z: 0.6, isPrimary: true, id: 3, color: '#10b981' });  // SQLite Database (2)
     nodes.push({ x: 1.2, y: 0.8, z: -0.5, isPrimary: true, id: 4, color: '#f59e0b' });  // Auto-Response (3)
 
-    // Intermediate path nodes to route pulses organically through the brain
+    // Intermediate path nodes to route pulses organically through the brain lobes
     nodes.push({ x: -0.8, y: 0.5, z: -1.0, isPath: true }); // Index 4 (Lead -> AI step 1)
     nodes.push({ x: -0.4, y: 0.4, z: -0.6, isPath: true }); // Index 5 (Lead -> AI step 2)
     nodes.push({ x: 0.4, y: 0.1, z: 0.1, isPath: true });   // Index 6 (AI -> DB step 1)
@@ -119,7 +162,7 @@ export default function Workflow3D() {
     nodes.push({ x: 0.4, y: 0.5, z: -0.3, isPath: true });  // Index 8 (AI -> Auto step 1)
     nodes.push({ x: 0.8, y: 0.7, z: -0.4, isPath: true });  // Index 9 (AI -> Auto step 2)
 
-    // Generate the remaining 60 nodes for Left/Right Cerebral Hemispheres, Cerebellum, and Brainstem
+    // Generate Left/Right cerebral cortex, cerebellum, and brainstem coordinates
     for (let i = 10; i < 70; i++) {
       if (i >= 10 && i < 35) {
         // Left Cerebral Hemisphere (x < 0)
@@ -159,7 +202,7 @@ export default function Workflow3D() {
           isAuxiliary: true
         });
       } else {
-        // Brainstem (base cylinder of nodes descending)
+        // Brainstem (vertical descending base)
         const idx = i - 66;
         nodes.push({
           x: (Math.random() - 0.5) * 0.1,
@@ -170,7 +213,7 @@ export default function Workflow3D() {
       }
     }
 
-    // --- 7. Synapses Creation (Nerves connecting neurons) ---
+    // --- 7. Synapses Connections (Nerve segments) ---
     const nodeConnections = [];
     const adjacencyList = Array.from({ length: 70 }, () => []);
 
@@ -183,23 +226,12 @@ export default function Workflow3D() {
       }
     };
 
-    // Explicitly link the workflow paths to guarantee signal routing
-    // Path 1: Lead Captured (0) -> AI Classifier (1)
-    addConnection(0, 4);
-    addConnection(4, 5);
-    addConnection(5, 1);
+    // Link explicit workflow paths
+    addConnection(0, 4); addConnection(4, 5); addConnection(5, 1); // Path 1
+    addConnection(1, 6); addConnection(6, 7); addConnection(7, 2); // Path 2
+    addConnection(1, 8); addConnection(8, 9); addConnection(9, 3); // Path 3
 
-    // Path 2: AI Classifier (1) -> SQLite DB (2)
-    addConnection(1, 6);
-    addConnection(6, 7);
-    addConnection(7, 2);
-
-    // Path 3: AI Classifier (1) -> Auto-Response (3)
-    addConnection(1, 8);
-    addConnection(8, 9);
-    addConnection(9, 3);
-
-    // Link closest neighbors within range for rest of the network
+    // Wire nearby nodes based on distance threshold
     for (let i = 0; i < 70; i++) {
       const distances = [];
       for (let j = 0; j < 70; j++) {
@@ -213,7 +245,6 @@ export default function Workflow3D() {
 
       distances.sort((x, y) => x.dist - y.dist);
 
-      // Connect to the 3 closest neighbors under threshold
       let connectedCount = adjacencyList[i].length;
       for (let k = 0; k < distances.length && connectedCount < 3; k++) {
         const neighbor = distances[k];
@@ -226,7 +257,7 @@ export default function Workflow3D() {
 
     // --- 8. Render Neural Network Components ---
 
-    // 8a. Node Meshes
+    // 8a. Node Group Meshes
     const nodeObjects = nodes.map((node, index) => {
       const group = new THREE.Group();
       group.position.set(node.x, node.y, node.z);
@@ -238,7 +269,7 @@ export default function Workflow3D() {
         size = 0.11;
         color = node.color;
 
-        // Visual halo sphere (emissive look)
+        // Outer glow capsule
         const outerGeo = new THREE.SphereGeometry(size * 1.6, 16, 16);
         const outerMat = new THREE.MeshBasicMaterial({
           color: color,
@@ -254,7 +285,7 @@ export default function Workflow3D() {
         const coreMesh = new THREE.Mesh(coreGeo, coreMat);
         group.add(coreMesh);
 
-        // Custom point light for dynamic local volumetric glow
+        // Local dynamic point light
         const pl = new THREE.PointLight(color, 2.0, 3.5);
         group.add(pl);
 
@@ -271,7 +302,7 @@ export default function Workflow3D() {
         group.add(coreMesh);
         group.userData = { isPrimary: false };
       } else {
-        // General nerve neuron cell
+        // General auxiliary nerve cell
         size = 0.032;
         const coreGeo = new THREE.SphereGeometry(size, 8, 8);
         const coreMat = new THREE.MeshBasicMaterial({
@@ -288,7 +319,7 @@ export default function Workflow3D() {
       return group;
     });
 
-    // 8b. Faint Background Synaptic Web Lines
+    // 8b. Faint Background Synaptic Lines
     const linePositions = [];
     const lineColors = [];
     const c1 = new THREE.Color(0x312e81);
@@ -316,13 +347,8 @@ export default function Workflow3D() {
     const lineSegments = new THREE.LineSegments(lineGeo, lineMat);
     brainGroup.add(lineSegments);
 
-    // 8c. Primary Wires (Slightly brighter routing path)
+    // 8c. Primary Route High-Glow Synaptic Lines
     const pathLinePositions = [];
-    const pathConnectionsList = [
-      [0, 4], [4, 5], [5, 1], // Path 1
-      [1, 6], [6, 7], [7, 2], // Path 2
-      [1, 8], [8, 9], [9, 3]  // Path 3
-    ];
     pathConnectionsList.forEach(([a, b]) => {
       const fromNode = nodes[a];
       const toNode = nodes[b];
@@ -336,18 +362,56 @@ export default function Workflow3D() {
     const pathLineMat = new THREE.LineBasicMaterial({
       color: 0x4f46e5,
       transparent: true,
-      opacity: 0.45
+      opacity: 0.42
     });
     const pathLineSegments = new THREE.LineSegments(pathLineGeo, pathLineMat);
     brainGroup.add(pathLineSegments);
 
-    // --- 9. Electrical Signal Engine (Nerve Spark Pulses) ---
+    // --- 9. Ambient Volumetric Floating Particles (Cognitive cloud) ---
+    const particleCount = 120;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      // Random shell distribution around brain coordinates
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 1.4 + Math.random() * 1.8;
+
+      particlePositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      particlePositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.8;
+      particlePositions[i * 3 + 2] = r * Math.cos(phi);
+
+      particleSpeeds.push({
+        orbit: 0.002 + Math.random() * 0.004,
+        pulseSpeed: 1.5 + Math.random() * 2,
+        phase: Math.random() * Math.PI
+      });
+    }
+
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x818cf8,
+      size: 0.038,
+      transparent: true,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const particlePoints = new THREE.Points(particleGeo, particleMat);
+    brainGroup.add(particlePoints);
+
+    // --- 10. Synaptic Impulse Firing Engine (Sparks) ---
     const activeSignals = [];
     const activeWaves = [];
 
-    // Spark spawner
     const spawnSignal = (nodePath, colorHex, isRealSubmit = false, onComplete = null) => {
-      const size = isRealSubmit ? 0.085 : 0.05;
+      const size = isRealSubmit ? 0.08 : 0.048;
       const geo = new THREE.SphereGeometry(size, 8, 8);
       const mat = new THREE.MeshBasicMaterial({
         color: colorHex,
@@ -367,14 +431,13 @@ export default function Workflow3D() {
         path: nodePath,
         currentHop: 0,
         progress: 0.0,
-        speed: isRealSubmit ? 0.045 : 0.02, // Fast submit sparks, organic idle sparks
+        speed: isRealSubmit ? 0.05 : 0.022,
         color: colorHex,
         isRealSubmit,
         onComplete
       });
     };
 
-    // Expanding shockwave ring helper on nodes
     const triggerWave = (nodeIndex, colorHex) => {
       const node = nodes[nodeIndex];
       const ringGeo = new THREE.RingGeometry(0.04, 0.25, 16);
@@ -386,7 +449,7 @@ export default function Workflow3D() {
       });
       const ringMesh = new THREE.Mesh(ringGeo, ringMat);
       ringMesh.position.set(node.x, node.y, node.z);
-      ringMesh.rotation.x = Math.PI / 2; // Flat horizontal plane
+      ringMesh.rotation.x = Math.PI / 2;
       brainGroup.add(ringMesh);
 
       activeWaves.push({
@@ -395,17 +458,16 @@ export default function Workflow3D() {
         mat: ringMat,
         scale: 1.0,
         opacity: 0.8,
-        speed: 0.07
+        speed: 0.075
       });
     };
 
-    // Global Action Potential sweep (Neural Storm)
     const triggerNeuralStorm = () => {
-      // Temporarily flash the synaptic nerve connections bright
-      lineMat.opacity = 0.48;
+      // Flash the connections bright
+      lineMat.opacity = 0.5;
       pathLineMat.opacity = 0.85;
 
-      // Spawn 35 random sparks traversing various parts of the brain in rapid sequence
+      // Spawn 35 random pulses in rapid sequence
       for (let i = 0; i < 35; i++) {
         setTimeout(() => {
           const startIdx = Math.floor(Math.random() * 70);
@@ -424,41 +486,63 @@ export default function Workflow3D() {
 
             const colors = ['#06b6d4', '#7c3aed', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            
-            spawnSignal(path, randomColor, true); // Fast spark
-            
-            // Randomly flash small auxiliary nodes
+            spawnSignal(path, randomColor, true);
+
+            // Pop scaling on local nodes
             const group = nodeObjects[startIdx];
             if (group && !nodes[startIdx].isPrimary) {
-              group.scale.set(1.6, 1.6, 1.6);
+              group.scale.set(1.5, 1.5, 1.5);
             }
           }
         }, i * 35);
       }
     };
 
+    const triggerPulse = () => {
+      // Find a random start node and neighbors
+      const startIdx = Math.floor(Math.random() * 70);
+      const neighbors = adjacencyList[startIdx];
+      if (neighbors && neighbors.length > 0) {
+        const hop1 = neighbors[Math.floor(Math.random() * neighbors.length)];
+        const path = [startIdx, hop1];
+        
+        const colors = ['#06b6d4', '#7c3aed', '#10b981', '#f59e0b'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        spawnSignal(path, randomColor, true); // Inject fast high-intensity spark
+        
+        // Flash target node wave
+        triggerWave(hop1, randomColor);
+      }
+    };
+
+    // Bind local triggers to controlsRef bridge
+    controlsRef.current.triggerNeuralStorm = triggerNeuralStorm;
+    controlsRef.current.triggerPulse = triggerPulse;
+
     // Handle Form Submit Event Sequence
     const handleFormSubmit = () => {
-      // 1. Flash Lead Captured immediately
+      setCognitiveState('LEAD RECEIVED');
+      
       triggerWave(0, '#06b6d4');
       const node0 = nodeObjects[0];
       if (node0) node0.scale.set(2.2, 2.2, 2.2);
 
-      // 2. Spawn Lead Captured -> AI Classifier packet train (3 Cyan sparks)
+      // Spawn 3 Cyan sparks spaced 110ms apart
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           spawnSignal([0, 4, 5, 1], '#06b6d4', true, i === 0 ? () => {
-            // When first Cyan spark hits AI Classifier (1), flash it
+            // Fired Classifier stage
+            setCognitiveState('CLASSIFICATION CASCADE');
             triggerWave(1, '#7c3aed');
             const node1 = nodeObjects[1];
             if (node1) node1.scale.set(2.2, 2.2, 2.2);
 
-            // Spawn split signals down paths 2 and 3
             setTimeout(() => {
-              // Path 2 to Database: [1, 6, 7, 2] (3 Teal sparks)
+              // Path to Database: [1, 6, 7, 2]
               for (let j = 0; j < 3; j++) {
                 setTimeout(() => {
                   spawnSignal([1, 6, 7, 2], '#10b981', true, j === 0 ? () => {
+                    setCognitiveState('STATED STORAGE WRITE');
                     triggerWave(2, '#10b981');
                     const node2 = nodeObjects[2];
                     if (node2) node2.scale.set(2.2, 2.2, 2.2);
@@ -466,16 +550,20 @@ export default function Workflow3D() {
                 }, j * 110);
               }
 
-              // Path 3 to Auto-Response: [1, 8, 9, 3] (3 Amber sparks)
+              // Path to Auto-Response: [1, 8, 9, 3]
               for (let j = 0; j < 3; j++) {
                 setTimeout(() => {
                   spawnSignal([1, 8, 9, 3], '#f59e0b', true, j === 0 ? () => {
+                    setCognitiveState('DISPATCHING AUTO-REACTION');
                     triggerWave(3, '#f59e0b');
                     const node3 = nodeObjects[3];
                     if (node3) node3.scale.set(2.2, 2.2, 2.2);
 
-                    // Once the message delivery executes, trigger the global neural storm burst!
+                    // Synaptic burst Storm finishes the processing flow
                     triggerNeuralStorm();
+                    setTimeout(() => {
+                      setCognitiveState('RESTING POTENTIAL');
+                    }, 2500);
                   } : null);
                 }, j * 110);
               }
@@ -487,7 +575,7 @@ export default function Workflow3D() {
 
     window.addEventListener('lead-submitted', handleFormSubmit);
 
-    // 8d. Idle background nerve impulse ticks (keeps the brain visually alive)
+    // Idle background impulse ticker
     const spawnIdleSignal = () => {
       const startIdx = Math.floor(Math.random() * 70);
       const neighbors = adjacencyList[startIdx];
@@ -509,60 +597,156 @@ export default function Workflow3D() {
       }
     };
 
-    const idleTimer = setInterval(spawnIdleSignal, 550);
+    const idleTimer = setInterval(spawnIdleSignal, 500);
 
-    // --- 10. Raycaster Hover Handler ---
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+    // --- 11. Custom Mouse Interaction (Drag-to-rotate & Raycaster Hover & Scroll-to-Zoom) ---
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+    let rotationX = 0;
+    let rotationY = 0;
+
+    const onMouseDown = (e) => {
+      isDragging = true;
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    };
 
     const onMouseMove = (event) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
+      // Raycasting hover check (only check when not actively dragging to save GPU resources)
+      if (!isDragging) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
 
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(scene.children, true);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children, true);
 
-      let foundIntersect = null;
-      for (let i = 0; i < intersects.length; i++) {
-        let parent = intersects[i].object.parent;
-        while (parent && parent !== scene) {
-          if (nodeObjects.includes(parent)) {
-            foundIntersect = parent;
-            break;
+        let foundIntersect = null;
+        for (let i = 0; i < intersects.length; i++) {
+          let parent = intersects[i].object.parent;
+          while (parent && parent !== scene) {
+            if (nodeObjects.includes(parent)) {
+              foundIntersect = parent;
+              break;
+            }
+            parent = parent.parent;
           }
-          parent = parent.parent;
+          if (foundIntersect) break;
         }
-        if (foundIntersect) break;
-      }
 
-      if (foundIntersect) {
-        const isPrimary = foundIntersect.userData.isPrimary;
-        if (isPrimary) {
+        if (foundIntersect && foundIntersect.userData.isPrimary) {
           setActiveNode(foundIntersect.userData.id);
         } else {
           setActiveNode(null);
         }
       } else {
-        setActiveNode(null);
+        // Drag rotation logic
+        const deltaMove = {
+          x: event.clientX - previousMousePosition.x,
+          y: event.clientY - previousMousePosition.y
+        };
+
+        targetRotationY += deltaMove.x * 0.005;
+        targetRotationX += deltaMove.y * 0.005;
+
+        previousMousePosition = { x: event.clientX, y: event.clientY };
       }
     };
 
-    container.addEventListener('mousemove', onMouseMove);
+    const onMouseUp = () => {
+      isDragging = false;
+    };
 
-    // --- 11. Animation Loop & HTML Tooltip Projection ---
+    // Mobile touch drag rotation
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (isDragging && e.touches.length === 1) {
+        const deltaMove = {
+          x: e.touches[0].clientX - previousMousePosition.x,
+          y: e.touches[0].clientY - previousMousePosition.y
+        };
+        targetRotationY += deltaMove.x * 0.006;
+        targetRotationX += deltaMove.y * 0.006;
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+    };
+
+    const onTouchEnd = () => {
+      isDragging = false;
+    };
+
+    // Scroll to zoom
+    const onWheel = (e) => {
+      e.preventDefault();
+      // Adjust target zoom bounds between 0.6x and 3.0x
+      targetZoom = Math.max(0.6, Math.min(3.0, targetZoom - e.deltaY * 0.0012));
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd);
+    container.addEventListener('wheel', onWheel, { passive: false });
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // --- 12. Animation Loop & HTML projection ---
     const tempV = new THREE.Vector3();
     const clock = new THREE.Clock();
+    let lastScanMode = false;
 
     const animate = () => {
       requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Slow organic brain rotation (spin and wobble)
-      brainGroup.rotation.y = elapsedTime * 0.04;
-      brainGroup.rotation.z = Math.sin(elapsedTime * 0.35) * 0.04;
-      brainGroup.rotation.x = Math.cos(elapsedTime * 0.25) * 0.03;
+      // Smooth camera zoom interpolation
+      camera.zoom += (targetZoom - camera.zoom) * 0.1;
+      camera.updateProjectionMatrix();
+
+      // Smooth inertia rotation interpolation for dragging
+      rotationX += (targetRotationX - rotationX) * 0.08;
+      rotationY += (targetRotationY - rotationY) * 0.08;
+
+      // Apply drag rotations on top of base auto-orbit spin
+      brainGroup.rotation.y = rotationY + elapsedTime * 0.045;
+      brainGroup.rotation.x = rotationX;
+      brainGroup.rotation.z = Math.sin(elapsedTime * 0.3) * 0.03;
+
+      // Parallax particle cloud rotation in opposite direction
+      particlePoints.rotation.y = -elapsedTime * 0.02;
+      particlePoints.rotation.x = Math.sin(elapsedTime * 0.15) * 0.03;
+
+      // Pulse floating particle opacities
+      particleMat.opacity = 0.4 + Math.sin(elapsedTime * 1.8) * 0.15;
+
+      // React to Holographic scan toggle colors
+      const currentScanMode = controlsRef.current.scanMode;
+      if (currentScanMode !== lastScanMode) {
+        lastScanMode = currentScanMode;
+        if (currentScanMode) {
+          // Matrix neon green grid
+          lineMat.color.setHex(0x10b981);
+          pathLineMat.color.setHex(0x059669);
+          particleMat.color.setHex(0x34d399);
+        } else {
+          // Standard cosmic indigo
+          lineMat.color.setHex(0x312e81);
+          pathLineMat.color.setHex(0x4f46e5);
+          particleMat.color.setHex(0x818cf8);
+        }
+      }
 
       // Animate active waves
       for (let i = activeWaves.length - 1; i >= 0; i--) {
@@ -580,7 +764,7 @@ export default function Workflow3D() {
         }
       }
 
-      // Animate nerve signals (sparks) traveling down lines
+      // Animate sparks traveling along synapses
       for (let i = activeSignals.length - 1; i >= 0; i--) {
         const sig = activeSignals[i];
         sig.progress += sig.speed;
@@ -608,13 +792,11 @@ export default function Workflow3D() {
           }
         }
 
-        // Interpolate position along synapse segment
         const p = sig.progress;
         const nx = startNode.x + (endNode.x - startNode.x) * p;
         const ny = startNode.y + (endNode.y - startNode.y) * p;
         const nz = startNode.z + (endNode.z - startNode.z) * p;
 
-        // Add small chemical synapse jitter for organic appearance
         const jitter = 0.015;
         sig.mesh.position.set(
           nx + (Math.random() - 0.5) * jitter,
@@ -623,7 +805,7 @@ export default function Workflow3D() {
         );
       }
 
-      // Slowly decay synapse lines flash opacities to resting baseline levels
+      // Slowly decay synapse line opacities back to baseline
       lineMat.opacity += (0.12 - lineMat.opacity) * 0.04;
       pathLineMat.opacity += (0.42 - pathLineMat.opacity) * 0.04;
 
@@ -634,22 +816,18 @@ export default function Workflow3D() {
           const isHovered = activeNode === group.userData.id;
           const targetScale = isHovered ? 1.35 : 1.0;
           
-          // Smoothly animate scaling
           group.scale.x += (targetScale - group.scale.x) * 0.1;
           group.scale.y += (targetScale - group.scale.y) * 0.1;
           group.scale.z += (targetScale - group.scale.z) * 0.1;
 
-          // Pulse primary node cores slightly
           const core = group.userData.coreMesh;
           const pulse = 1.0 + Math.sin(elapsedTime * 4.0 + index) * 0.06;
           core.scale.set(pulse, pulse, pulse);
 
-          // Animate local light source intensities
           const pl = group.userData.pointLight;
           const targetIntensity = isHovered ? 4.0 : 1.8 + Math.sin(elapsedTime * 2.5 + index) * 0.35;
           pl.intensity += (targetIntensity - pl.intensity) * 0.15;
         } else {
-          // Decays auxiliary node scale back to normal
           group.scale.x += (1.0 - group.scale.x) * 0.08;
           group.scale.y += (1.0 - group.scale.y) * 0.08;
           group.scale.z += (1.0 - group.scale.z) * 0.08;
@@ -659,12 +837,11 @@ export default function Workflow3D() {
       // Project the 4 primary world coordinates directly to 2D HTML overlays
       nodeData.forEach((node, idx) => {
         const el = tooltipRefs.current[idx];
-        const group = nodeObjects[idx]; // Corresponds to indices 0, 1, 2, 3 in nodeObjects
+        const group = nodeObjects[idx];
         if (!el || !group) return;
 
-        // Fetch rotating 3D world coordinates
         group.getWorldPosition(tempV);
-        tempV.y += 0.35; // Hover tooltip slightly above node
+        tempV.y += 0.35; // Hover tooltip offset
 
         tempV.project(camera);
 
@@ -676,7 +853,7 @@ export default function Workflow3D() {
 
       // Project bottom terminal status bar coordinate at front edge of the brainstem
       if (statusRef.current) {
-        tempV.set(0, -1.3, 0); // Ground position below brainstem
+        tempV.set(0, -1.35, 0); // Ground position below brainstem
         tempV.project(camera);
         const sx = (tempV.x * 0.5 + 0.5) * width;
         const sy = (tempV.y * -0.5 + 0.5) * height;
@@ -688,7 +865,7 @@ export default function Workflow3D() {
 
     animate();
 
-    // --- 12. Resize Handler ---
+    // --- 13. Resize Handler ---
     const handleResize = () => {
       width = container.clientWidth;
       height = container.clientHeight || 520;
@@ -708,13 +885,23 @@ export default function Workflow3D() {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('lead-submitted', handleFormSubmit);
       clearInterval(idleTimer);
+      
+      container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('wheel', onWheel);
       
       renderer.dispose();
       lineGeo.dispose();
       lineMat.dispose();
       pathLineGeo.dispose();
       pathLineMat.dispose();
+      particleGeo.dispose();
+      particleMat.dispose();
 
       nodeObjects.forEach(group => {
         group.children.forEach(child => {
@@ -731,13 +918,14 @@ export default function Workflow3D() {
         w.mat.dispose();
       });
     };
-  }, [activeNode]);
+  }, []);
 
   return (
     <div className="three-visual-container" ref={containerRef}>
+      {/* Three.js canvas */}
       <canvas className="three-canvas" ref={canvasRef} />
 
-      {/* HTML Projective Overlay Tooltips */}
+      {/* Floating HTML Projective Overlay Tooltips */}
       {nodeData.map((node, idx) => (
         <div
           key={node.id}
@@ -756,6 +944,57 @@ export default function Workflow3D() {
           <div className="tooltip-pointer" />
         </div>
       ))}
+
+      {/* Interactive Control Dashboard Panel Overlay */}
+      <div className="brain-dashboard-panel glassmorphic-panel">
+        <div className="dashboard-header">
+          <Activity size={14} className="dashboard-pulse-icon" />
+          <span>NEURAL WORKFLOW CORE</span>
+        </div>
+
+        <div className="dashboard-stat-row">
+          <span className="stat-label">Cognition Load:</span>
+          <span className={`stat-value ${cognitiveState !== 'RESTING POTENTIAL' ? 'active' : ''}`}>
+            {cognitiveState}
+          </span>
+        </div>
+
+        <div className="dashboard-buttons">
+          <button 
+            className="btn-dashboard" 
+            onClick={handleNeuralStorm}
+            title="Fire coordinate action potential storms across synapses"
+          >
+            <Zap size={11} /> Storm Pulse
+          </button>
+          <button 
+            className="btn-dashboard" 
+            onClick={handleInjectStimulus}
+            title="Inject random chemical synapse electric impulse"
+          >
+            <Activity size={11} /> Stimulate
+          </button>
+        </div>
+
+        <div className="dashboard-toggle-row">
+          <span className="toggle-label">
+            {scanMode ? <Eye size={12} className="toggle-icon-label" /> : <EyeOff size={12} className="toggle-icon-label" />}
+            Scan Matrix
+          </span>
+          <label className="switch">
+            <input 
+              type="checkbox" 
+              checked={scanMode} 
+              onChange={handleToggleScan} 
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
+        
+        <div className="dashboard-drag-hint">
+          Drag to Rotate • Scroll to Zoom
+        </div>
+      </div>
 
       {/* Bottom Status Board */}
       <div className="three-status-board" ref={statusRef}>

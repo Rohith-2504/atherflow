@@ -157,6 +157,189 @@
   animation: pulse 2s infinite;
 }
 
+/* Interactive Control Dashboard Panel Overlay */
+.brain-dashboard-panel {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 210px;
+  background: rgba(9, 10, 16, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 14px;
+  z-index: 15;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-heading);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto; /* Let clicks hit buttons */
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.725rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.dashboard-pulse-icon {
+  color: var(--color-primary);
+  animation: pulse-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 3px var(--color-primary)); }
+}
+
+.dashboard-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.stat-label {
+  color: var(--color-text-muted);
+}
+
+.stat-value {
+  color: #94a3b8;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.625rem;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.stat-value.active {
+  color: var(--color-secondary);
+  background: rgba(6, 182, 212, 0.12);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+  animation: flicker-text 1.2s infinite alternate;
+}
+
+@keyframes flicker-text {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+.dashboard-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.btn-dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.btn-dashboard:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-dashboard:active {
+  transform: translateY(0);
+}
+
+.dashboard-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toggle-icon-label {
+  color: var(--color-secondary);
+  opacity: 0.8;
+}
+
+/* Custom CSS Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #334155;
+  transition: .3s;
+  border-radius: 16px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--color-success);
+}
+
+input:checked + .slider:before {
+  transform: translateX(12px);
+}
+
+.dashboard-drag-hint {
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
 /* Mobile responsive sizing */
 @media (max-width: 768px) {
   .three-visual-container {
@@ -188,5 +371,22 @@
   .three-status-board {
     font-size: 0.65rem;
     padding: 6px 12px;
+  }
+  .brain-dashboard-panel {
+    width: 170px;
+    padding: 8px 10px;
+    right: 8px;
+    top: 8px;
+    gap: 8px;
+  }
+  .dashboard-header {
+    font-size: 0.65rem;
+  }
+  .dashboard-stat-row, .dashboard-toggle-row {
+    font-size: 0.625rem;
+  }
+  .btn-dashboard {
+    font-size: 0.58rem;
+    padding: 4px;
   }
 }

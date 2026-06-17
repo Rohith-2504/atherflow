@@ -1,3 +1,4 @@
+# Aetheria Hyper-GT Render Deployment Blueprint
 services:
   - type: web
     name: aetheria-hyper-gt

@@ -173,6 +173,9 @@ export default function LeadForm({ isHighlighted }) {
         setErrors({});
         setTouched({});
         fetchLeads(); // Refresh inspector list
+        
+        // Trigger live WebGL 3D synapse firing sequence
+        window.dispatchEvent(new CustomEvent('lead-submitted'));
       } else {
         // Capture server-side validation error mapping if returned
         if (result.errors) {
